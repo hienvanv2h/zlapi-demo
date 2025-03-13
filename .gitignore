@@ -1,0 +1,33 @@
+# Created by venv; see https://docs.python.org/3/library/venv.html
+
+# Bỏ qua thư mục ảo hóa (virtual environment)
+venv/
+.Venv/
+env/
+ENV/
+
+# Bỏ qua các file môi trường nhạy cảm
+.env
+.env.*
+!*.env.example
+
+# Bỏ qua file cookie chứa thông tin đăng nhập hoặc phiên làm việc
+cookies.json
+
+# Bỏ qua các tệp cache và biên dịch của Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Bỏ qua file log, debug
+*.log
+
+# Bỏ qua file editor, hệ điều hành
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Nếu dùng pipenv hoặc poetry, có thể bỏ qua tệp lock (nếu không muốn)
+Pipfile.lock
+poetry.lock
