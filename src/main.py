@@ -1,24 +1,25 @@
 import sys
 import os
 import json
+import threading
+import time
+import signal
 from dotenv import load_dotenv
 
 from models.rabbitmq import RabbitMQ
 from models.zalobot import ZaloBot
+from models.logger import setup_logger
 
-# Kết nối RabbitMQ
-def create_rabbitmq_connection():
-    try:
-        rabbitmq = RabbitMQ()
-    except Exception as e:
-        print(f"[RabbitMQ] Critical Error: {e}")
-        sys.exit(1)
-
-    return rabbitmq
+# Setup main logger
+logger = setup_logger("Main")
+exit_flag = threading.Event()
 
 def on_message_received(ch, method, properties, body):
     text = body.decode('utf-8')
-    print(f"[RabbitMQ] Received message from RabbitMQ: {text}")
+    logger.info(f"Received message from RabbitMQ: {text}")
+    if exit_flag.is_set():
+        logger.info("Received keyboard interrupt. Stop handling messages.")
+        ch.stop_consuming()
 
 # Tải thông tin tài khoản Zalo
 def load_zalo_info():
@@ -33,32 +34,72 @@ def load_zalo_info():
         with open(cookies_filepath, "r") as f:
             cookies = json.load(f)
     except FileNotFoundError:
-        print("Cookies file not found. Logging in fresh...")
+        logger.error("Cookies file not found.")
         sys.exit(1)
+        return None
     except json.JSONDecodeError:
-        print("Failed to decode cookies. Check cookies.json file.")
+        logger.error("Failed to decode cookies. Check cookies.json file.")
         sys.exit(1)
+        return None
     return phone, password, imei, cookies
 
-def main():
-    print("[RabbitMQ] Creating RabbitMQ connection...")
-    rabbitmq = create_rabbitmq_connection()
-    try:
-        rabbitmq.consume("test-queue", on_message_received)
-    except Exception as e:
-        print(f"[RabbitMQ] Failed to consume messages: {e}")
-        sys.exit(1)
-    finally:
-        rabbitmq.close()
-
-    phone, password, imei, cookies = load_zalo_info()
+def run_zalobot():
+    zalo_info = load_zalo_info()
+    if zalo_info is None:
+        logger.error("Failed to load Zalo credentials.")
+        return
+    phone, password, imei, cookies = zalo_info
     bot = ZaloBot(phone=phone, password=password, imei=imei, cookies=cookies)
 
     self_id = bot.user_id
     print("Current user:")
     bot.printAccountInfo(self_id)
-    bot.listen()
+    try:
+        bot.listen()
+    except Exception as e:
+        logger.error(e)
 
+def main():
+    try:
+        signal.signal(signal.SIGINT, lambda sig, frame: exit_flag.set())
+
+        logger.info("Creating RabbitMQ connection...")
+        rabbitmq = RabbitMQ()
+        if not rabbitmq.connect():
+            sys.exit(1)
+
+        # Create comsumer
+        logger.info("Creating consumer...")
+        consumer_created = rabbitmq.consume("test-queue", on_message_received)
+        if not consumer_created:
+            sys.exit(1)
+
+        # Run ZaloBot
+        logger.info("Running ZaloBot...")
+        zalo_thread = threading.Thread(target=run_zalobot, daemon=True)
+        zalo_thread.start()
+    
+        # Keep main thread alive
+        while not exit_flag.is_set():
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt. Shutting down...")
+        exit_flag.set()
+    finally:
+        # Cleanup
+        if rabbitmq:
+            logger.info("Closing RabbitMQ connection...")
+            rabbitmq.close()
+
+        if zalo_thread and zalo_thread.is_alive():
+            zalo_thread.join(timeout=3)
+
+            if zalo_thread.is_alive():
+                logger.warning("ZaloBot thread is still alive. Forcing exit...")
+                os._exit(0)
+
+        logger.info("Application shutdown complete.")
+        return
 
 if __name__ == "__main__":
     main()

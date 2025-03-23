@@ -3,6 +3,7 @@ from models.rabbitmq import RabbitMQ
 def publish_message():
     rabbitmq = RabbitMQ()
     try:
+        rabbitmq.connect()
         rabbitmq.publish("test-queue", "Hello, RabbitMQ!")
         print("Message published successfully.")
     except Exception as e:

@@ -1,23 +1,22 @@
 from zlapi import ZaloAPI
 from zlapi.models import *
-from zlapi.logging import Logging
-
-logger = Logging(theme="catppuccin-mocha", text_color="white", log_text_color="black")
+from models.logger import setup_logger
 
 class ZaloBot(ZaloAPI):
-    def __init__(self, phone=None, password=None, imei=None, cookies=None, user_agent=None, auto_login=True):
+    def __init__(self, phone=None, password=None, imei=None, cookies=None, user_agent=None, auto_login=True, logger=None):
         super().__init__(phone, password, imei, cookies, user_agent, auto_login)
+        self.logger = logger or setup_logger(name="ZaloBot", log_file="zalobot.log")
 
     def onMessage(self, mid=None, author_id=None, message=None, message_object=None, thread_id=None, thread_type=ThreadType.USER):
         if not isinstance(message, str):
             return
         
         if thread_type == ThreadType.USER:
-            logger.info(f"Received message from USER - Thread ID: {thread_id}")
+            self.logger.info(f"Received message from USER - Thread ID: {thread_id}")
         elif thread_type == ThreadType.GROUP:
-            logger.info(f"Received message from GROUP - Thread ID: {thread_id}")
+            self.logger.info(f"Received message from GROUP - Thread ID: {thread_id}")
         else:
-            logger.info(f"Received message from UNKNOWN Thread type - Thread ID: {thread_id}")
+            self.logger.info(f"Received message from UNKNOWN Thread type - Thread ID: {thread_id}")
         
         self.printAccountInfo(author_id)
 
@@ -48,7 +47,7 @@ class ZaloBot(ZaloAPI):
         user = self.fetchUserInfo(userId)
         if not user or not isinstance(user, User):
             return
-        logger.info(f"User: {user}")
+        self.logger.info(user)
 
     def printGroupInfo(self, groupId):
         """
@@ -57,4 +56,4 @@ class ZaloBot(ZaloAPI):
         group = self.fetchGroupInfo(groupId)
         if not group or not isinstance(group, Group):
             return
-        logger.info(f"Group info: {group}")
+        self.logger.info(group)
