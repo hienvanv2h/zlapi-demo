@@ -1,6 +1,7 @@
 import os
 import logging
 import colorlog
+from logging.handlers import TimedRotatingFileHandler
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -47,7 +48,7 @@ def setup_logger(name, log_file=None, level=logging.INFO):
     # Create a file handler if a log file is provided
     if log_file:
         log_file_path = os.path.join(log_dir, log_file)
-        file_handler = logging.FileHandler(log_file_path)
+        file_handler = TimedRotatingFileHandler(log_file_path, when="midnight", backupCount=7, encoding="utf-8")
         file_handler.setLevel(level)
         file_formatter = logging.Formatter(log_format)
         file_handler.setFormatter(file_formatter)
