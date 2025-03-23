@@ -4,6 +4,7 @@ import json
 import threading
 import time
 import signal
+import random
 from dotenv import load_dotenv
 
 from models.rabbitmq import RabbitMQ
@@ -15,11 +16,14 @@ logger = setup_logger("Main")
 exit_flag = threading.Event()
 
 def on_message_received(ch, method, properties, body):
+    processing_time = random.randint(1, 5)
     text = body.decode('utf-8')
-    logger.info(f"Received message from RabbitMQ: {text}")
-    if exit_flag.is_set():
-        logger.info("Received keyboard interrupt. Stop handling messages.")
-        ch.stop_consuming()
+    logger.info(f"Received: {text} - Processing time: {processing_time} seconds")
+    time.sleep(processing_time)
+
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+    logger.info("Finished processing message")
+
 
 # Tải thông tin tài khoản Zalo
 def load_zalo_info():
@@ -70,6 +74,10 @@ def main():
 
         # Create comsumer
         logger.info("Creating consumer...")
+
+        # prefetch
+        rabbitmq.channel.basic_qos(prefetch_count=1)
+
         consumer_created = rabbitmq.consume("test-queue", on_message_received)
         if not consumer_created:
             sys.exit(1)
@@ -87,10 +95,9 @@ def main():
         exit_flag.set()
     finally:
         # Cleanup
-        if rabbitmq:
-            logger.info("Closing RabbitMQ connection...")
-            rabbitmq.close()
-
+        logger.info("Closing RabbitMQ connection...")
+        rabbitmq.close()
+            
         if zalo_thread and zalo_thread.is_alive():
             zalo_thread.join(timeout=3)
 

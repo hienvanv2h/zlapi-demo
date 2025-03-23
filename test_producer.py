@@ -1,11 +1,14 @@
+import time
 from models.rabbitmq import RabbitMQ
 
 def publish_message():
     rabbitmq = RabbitMQ()
     try:
         rabbitmq.connect()
-        rabbitmq.publish("test-queue", "Hello, RabbitMQ!")
-        print("Message published successfully.")
+        for i in range(50):
+            rabbitmq.publish_to_queue(queue_name="test-queue", message=f"({i}) Hello, RabbitMQ!")
+            time.sleep(2)
+        print("Messages published successfully.")
     except Exception as e:
         print(f"Failed to publish message: {e}")
     finally:
