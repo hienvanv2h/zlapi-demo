@@ -1,6 +1,6 @@
 from zlapi import ZaloAPI
 from zlapi.models import *
-from models.logger import setup_logger
+from utils.logger import setup_logger
 
 class ZaloBot(ZaloAPI):
     def __init__(self, phone=None, password=None, imei=None, cookies=None, user_agent=None, auto_login=True, logger=None):

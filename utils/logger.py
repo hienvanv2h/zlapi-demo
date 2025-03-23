@@ -2,6 +2,8 @@ import os
 import logging
 import colorlog
 
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 def setup_logger(name, log_file=None, level=logging.INFO):
     """
     Setup a logger.
@@ -40,7 +42,7 @@ def setup_logger(name, log_file=None, level=logging.INFO):
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
-    log_dir = os.path.join(os.getcwd(), "logs")
+    log_dir = os.path.join(ROOT_DIR, "logs")
     os.makedirs(log_dir, exist_ok=True)
     # Create a file handler if a log file is provided
     if log_file:

@@ -2,7 +2,7 @@ import pika
 import os
 import time
 import threading
-from models.logger import setup_logger
+from utils.logger import setup_logger
 
 class RabbitMQ:
     def __init__(self):

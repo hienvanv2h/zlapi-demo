@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from models.rabbitmq import RabbitMQ
 from models.zalobot import ZaloBot
-from models.logger import setup_logger
+from utils.logger import setup_logger
 
 # Setup main logger
 logger = setup_logger("Main")
