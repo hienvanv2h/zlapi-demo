@@ -52,6 +52,7 @@ def setup_logger(name, log_file=None, level=logging.INFO):
         file_handler.setLevel(level)
         file_formatter = logging.Formatter(log_format)
         file_handler.setFormatter(file_formatter)
+        file_handler.suffix = "%Y%m%d"
         logger.addHandler(file_handler)
 
     return logger
