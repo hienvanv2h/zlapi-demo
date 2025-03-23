@@ -31,3 +31,8 @@ Thumbs.db
 # Nếu dùng pipenv hoặc poetry, có thể bỏ qua tệp lock (nếu không muốn)
 Pipfile.lock
 poetry.lock
+
+test.txt
+data/*
+logs/*
+test/
