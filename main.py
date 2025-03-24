@@ -1,88 +1,44 @@
 import sys
 import os
-import json
 import threading
 import time
 import signal
-import random
-from dotenv import load_dotenv
 
 from models.rabbitmq import RabbitMQ
-from models.zalobot import ZaloBot
 from utils.logger import setup_logger
+from handlers.zalo_handler import init_zalobot, run_zalo_listener
+from handlers.message_handler import on_message_received
 
 # Setup main logger
 logger = setup_logger("Main")
 exit_flag = threading.Event()
 
-def on_message_received(ch, method, properties, body):
-    processing_time = random.randint(1, 5)
-    text = body.decode('utf-8')
-    logger.info(f"Received: {text} - Processing time: {processing_time} seconds")
-    time.sleep(processing_time)
-
-    ch.basic_ack(delivery_tag=method.delivery_tag)
-    logger.info("Finished processing message")
-
-
-# Tải thông tin tài khoản Zalo
-def load_zalo_info():
-    load_dotenv()
-    phone = os.getenv("ZALO_PHONE")
-    password = os.getenv("ZALO_PASSWORD")
-    imei = os.getenv("ZALO_IMEI")
-    cookies_filepath = os.getenv("ZALO_COOKIES_PATH")
-
-    cookies = {}
-    try:
-        with open(cookies_filepath, "r") as f:
-            cookies = json.load(f)
-    except FileNotFoundError:
-        logger.error("Cookies file not found.")
-        sys.exit(1)
-        return None
-    except json.JSONDecodeError:
-        logger.error("Failed to decode cookies. Check cookies.json file.")
-        sys.exit(1)
-        return None
-    return phone, password, imei, cookies
-
 def run_zalobot():
-    zalo_info = load_zalo_info()
-    if zalo_info is None:
-        logger.error("Failed to load Zalo credentials.")
+    bot = init_zalobot()
+    if bot is None:
+        logger.error("Failed to init ZaloBot.")
         return
-    phone, password, imei, cookies = zalo_info
-    bot = ZaloBot(phone=phone, password=password, imei=imei, cookies=cookies)
-
-    self_id = bot.user_id
-    print("Current user:")
-    bot.printAccountInfo(self_id)
-    try:
-        bot.listen()
-    except Exception as e:
-        logger.error(e)
+    run_zalo_listener(bot)
 
 def main():
+    zalo_thread = None
     try:
         signal.signal(signal.SIGINT, lambda sig, frame: exit_flag.set())
 
+        # Create RabbitMQ
         logger.info("Creating RabbitMQ connection...")
         rabbitmq = RabbitMQ()
         if not rabbitmq.connect():
             sys.exit(1)
 
-        # Create comsumer
         logger.info("Creating consumer...")
-
         # prefetch
         rabbitmq.channel.basic_qos(prefetch_count=1)
-
-        consumer_created = rabbitmq.consume("test-queue", on_message_received)
+        consumer_created = rabbitmq.consume(queue_name="XXX_QUEUE", callback=on_message_received)
         if not consumer_created:
             sys.exit(1)
 
-        # Run ZaloBot
+        # Run ZaloBot in a separate thread
         logger.info("Running ZaloBot...")
         zalo_thread = threading.Thread(target=run_zalobot, daemon=True)
         zalo_thread.start()

@@ -36,3 +36,4 @@ test.txt
 data/*
 logs/*
 test/
+test.*

@@ -222,6 +222,7 @@ class RabbitMQ:
             self.channel.basic_publish(exchange=exchange, routing_key=routing_key, body=message, properties=properties)
             
             self.logger.info(f"Published message to exchange {exchange} with routing key {routing_key}")
+            self.logger.debug(f"Message: {message}")
             return True
         except pika.exceptions.ChannelClosedByBroker as e:
             self.logger.error(f"Channel closed by broker while publishing: {e}.\nAttempting to reconnect...")

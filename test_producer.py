@@ -6,7 +6,7 @@ def publish_message():
     try:
         rabbitmq.connect()
         for i in range(50):
-            rabbitmq.publish_to_queue(queue_name="test-queue", message=f"({i}) Hello, RabbitMQ!")
+            rabbitmq.publish_to_queue(queue_name="XXX_QUEUE", message=f"({i}) Hello, RabbitMQ!")
             time.sleep(2)
         print("Messages published successfully.")
     except Exception as e:

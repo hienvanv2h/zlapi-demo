@@ -19,11 +19,11 @@ def setup_logger(name, log_file=None, level=logging.INFO):
     """
     # Create the logger
     logger = logging.getLogger(name)
-    logger.setLevel(level)
-    # Remove existing handlers if any
+    # Check if the logger has already been configured
     if logger.handlers:
-        logger.handlers.clear()
-
+        return logger
+    
+    logger.setLevel(level)
     log_format = "[%(name)s] %(asctime)s - %(levelname)s - %(message)s"
 
     console_formatter = colorlog.ColoredFormatter(
@@ -43,10 +43,11 @@ def setup_logger(name, log_file=None, level=logging.INFO):
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
-    log_dir = os.path.join(ROOT_DIR, "logs")
-    os.makedirs(log_dir, exist_ok=True)
     # Create a file handler if a log file is provided
     if log_file:
+        log_dir = os.path.join(ROOT_DIR, "logs")
+        os.makedirs(log_dir, exist_ok=True)
+
         log_file_path = os.path.join(log_dir, log_file)
         file_handler = TimedRotatingFileHandler(log_file_path, when="midnight", backupCount=7, encoding="utf-8")
         file_handler.setLevel(level)
@@ -56,3 +57,12 @@ def setup_logger(name, log_file=None, level=logging.INFO):
         logger.addHandler(file_handler)
 
     return logger
+
+def get_logger(name):
+    """
+    Get a logger by name. If it doesn't exist, create one without file handler.
+    
+    Returns:
+        logging.Logger: The logger instance.
+    """
+    return logging.getLogger(name) if logging.getLogger(name).handlers else setup_logger(name=name)
