@@ -1,14 +1,15 @@
 import os
+
 from typing import Any, Dict, List, Optional, Tuple, Union
 from dotenv import load_dotenv
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.database import Database
 from pymongo.cursor import Cursor
 
-class MongoDB:
-    """
-    Custom MongoDB manager
-    """
+from models.singleton import SingletonMeta
+
+class MongoDB(metaclass=SingletonMeta):
+    """Singleton class for MongoDB"""
     # Constants for sort directions
     ASC = ASCENDING
     DESC = DESCENDING
@@ -21,7 +22,7 @@ class MongoDB:
         if not uri:
             raise ValueError("MONGODB_URI is not set in the environment variables.")
         
-        self.client = MongoClient(uri)
+        self._client = MongoClient(uri)
         self._db: Optional[Database] = None
 
         if db_name is not None:
@@ -31,6 +32,11 @@ class MongoDB:
     def db(self) -> Optional[Database]:
         """Get current database instance"""
         return self._db
+
+    @property
+    def client(self) -> MongoClient:
+        """Get current client instance"""
+        return self._client
 
     def select_db(self, db_name):
         """
@@ -275,4 +281,6 @@ class MongoDB:
     
     def close(self):
         """Close MongoDB connection"""
-        self.client.close()
+        if self.client:
+            self.client.close()
+            MongoDB._instances.pop(self.__class__, None)
