@@ -22,20 +22,8 @@ def init_zalobot():
 
         self_id = bot.user_id
         print(f"ZaloBot created - User")
-        bot.printAccountInfo(self_id)
+        bot.print_account_info(self_id)
         return bot
     except Exception as e:
         logger.error(e)
         return None
-
-def run_zalo_listener(bot):
-    if bot is None:
-        logger.error("ZaloBot is not initialized.")
-        return False
-    try:
-        logger.info("Starting listener...")
-        bot.listen()
-        return True
-    except Exception as e:
-        logger.error(e)
-        return False

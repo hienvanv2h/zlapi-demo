@@ -2,13 +2,14 @@ import pika
 import os
 import time
 import threading
-
 import pika.exceptions
 import pika.spec
+
+from interfaces import IZaloBot
 from utils.logger import setup_logger
 
 class RabbitMQ:
-    def __init__(self):
+    def __init__(self, bot: IZaloBot = None):
         self.user = os.getenv('RABBITMQ_USER', 'guest')
         self.password = os.getenv('RABBITMQ_PASSWORD', 'guest')
         self.host = os.getenv('RABBITMQ_HOST', 'localhost')
@@ -18,6 +19,7 @@ class RabbitMQ:
         self.logger = setup_logger(name="RabbitMQ", log_file="rabbitmq.log")
         self.consumer_thread = None
         self.is_consuming = False
+        self.zalo_bot = bot
 
     def connect(self, retries=5, delay=2):
         for i in range(retries):
@@ -148,9 +150,13 @@ class RabbitMQ:
             self.logger.error("Connection is not established.")
             return False
         
+        def wrapper_callback(ch, method, properties, body):
+            # Truyền thêm logger vào callback
+            callback(ch, method, properties, body, logger=self.logger, bot=self.zalo_bot)
+        
         try:
             self.channel.queue_declare(queue=queue_name, durable=True)   # use existing or create
-            self.channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=auto_ack)
+            self.channel.basic_consume(queue=queue_name, on_message_callback=wrapper_callback, auto_ack=auto_ack)
 
             # Run in a separate thread
             def run_consumer():
@@ -164,7 +170,7 @@ class RabbitMQ:
                                 self.logger.error(f"Stream connection lost: {e}.\nAttempting to reconnect...")
                                 if self.reconnect():
                                     self.channel.queue_declare(queue=queue_name, durable=True)
-                                    self.channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=auto_ack)
+                                    self.channel.basic_consume(queue=queue_name, on_message_callback=wrapper_callback, auto_ack=auto_ack)
                                 else:
                                     self.logger.error("Failed to reconnect to RabbitMQ. Stopping consumer.")
                                     break
@@ -173,7 +179,7 @@ class RabbitMQ:
                                 self.logger.error(f"Channel closed by broker: {e}.\nAttempting to reconnect...")
                                 if self.reconnect():
                                     self.channel.queue_declare(queue=queue_name, durable=True)
-                                    self.channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=auto_ack)
+                                    self.channel.basic_consume(queue=queue_name, on_message_callback=wrapper_callback, auto_ack=auto_ack)
                                 else:
                                     self.logger.error("Failed to reconnect to RabbitMQ. Stopping consumer.")
                                     break

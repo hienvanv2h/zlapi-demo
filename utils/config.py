@@ -37,3 +37,11 @@ def load_zalo_credentials():
         "imei": imei,
         "cookies": cookies
     }
+
+def get_base_url():
+    load_dotenv()
+    return os.getenv("BASE_URL")
+
+def get_prefix_id():
+    load_dotenv()
+    return os.getenv("PREFIX_ID")
