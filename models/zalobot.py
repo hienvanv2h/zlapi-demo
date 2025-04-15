@@ -69,10 +69,8 @@ class ZaloBot(ZaloAPI, IZaloBot):
             self.logger.error(e)
             return False
         
-    def notify_download_image(self, phone_number, message):
-        """
-        Gửi thông báo đến người dùng
-        """
+    def send_message(self, phone_number, message, thread_type=ThreadType.USER):
+        """Gửi tin nhắn Zalo đến số điện thoại cụ thể"""
         profile = self.fetchPhoneNumber(phone_number)
         # self.logger.info(profile)
 
@@ -81,7 +79,7 @@ class ZaloBot(ZaloAPI, IZaloBot):
         # Gửi thông báo
         self.sendMessage(
             thread_id=user_id,
-            thread_type=ThreadType.USER,
+            thread_type=thread_type,
             message=Message(text=message)
         )
 

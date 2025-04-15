@@ -196,6 +196,77 @@ class RabbitMQ:
             self.logger.error(f"Failed to setup consumer: {e}")
             return False
     
+    def consume2(self, queue_name, callback_registry, auto_ack=False):
+        """
+        Consume messages from a queue
+
+        Parameters:
+        - queue_name: Name of the queue
+        - callback: Callback function to handle received messages
+        - auto_ack: Whether to automatically acknowledge received messages
+        """
+        if not self.channel:
+            self.logger.error("Connection is not established.")
+            return False
+        
+        def wrapper_callback(ch, method, properties, body):
+            """Xử lý message và gọi callback tương ứng"""
+            message = body.decode('utf-8')
+            # Payload format: <_>|<actioType>|<taskId>#<payload>
+            data_fragment = message.split("|")
+            action_type = data_fragment[1]
+
+            callback = callback_registry.get(action_type)
+            if not callback:
+                self.logger.warning(f"No handler found for action_type: {action_type}")
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                return
+            
+            # Truyền thêm logger vào callback
+            callback(ch, method, properties, body, bot=self.zalo_bot, logger=self.logger)
+        
+        try:
+            self.channel.queue_declare(queue=queue_name, durable=True)   # use existing or create
+            self.channel.basic_consume(queue=queue_name, on_message_callback=wrapper_callback, auto_ack=auto_ack)
+
+            # Run in a separate thread
+            def run_consumer():
+                self.is_consuming = True
+                try:
+                    while self.is_consuming:
+                        try:
+                            self.channel.start_consuming()
+                        except pika.exceptions.StreamLostError as e:
+                            if self.is_consuming:
+                                self.logger.error(f"Stream connection lost: {e}.\nAttempting to reconnect...")
+                                if self.reconnect():
+                                    self.channel.queue_declare(queue=queue_name, durable=True)
+                                    self.channel.basic_consume(queue=queue_name, on_message_callback=wrapper_callback, auto_ack=auto_ack)
+                                else:
+                                    self.logger.error("Failed to reconnect to RabbitMQ. Stopping consumer.")
+                                    break
+                        except pika.exceptions.ChannelClosedByBroker as e:
+                            if self.is_consuming:
+                                self.logger.error(f"Channel closed by broker: {e}.\nAttempting to reconnect...")
+                                if self.reconnect():
+                                    self.channel.queue_declare(queue=queue_name, durable=True)
+                                    self.channel.basic_consume(queue=queue_name, on_message_callback=wrapper_callback, auto_ack=auto_ack)
+                                else:
+                                    self.logger.error("Failed to reconnect to RabbitMQ. Stopping consumer.")
+                                    break
+                except Exception as e:
+                    self.logger.error(f"Failed to setup consumer: {e}")
+                finally:
+                    self.logger.info("Consumer stopped.")
+
+            self.consumer_thread = threading.Thread(target=run_consumer, daemon=True)
+            self.consumer_thread.start()
+            self.logger.info(f"Consumer started for queue: {queue_name}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to setup consumer: {e}")
+            return False
+    
     def reconnect(self):
         """Reconnect to RabbitMQ"""
         try:

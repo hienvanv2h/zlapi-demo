@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from zlapi._threads import ThreadType
 
 class IZaloBot(ABC):
     @abstractmethod
@@ -14,5 +15,5 @@ class IZaloBot(ABC):
         pass
 
     @abstractmethod
-    def notify_download_image(self, phone_number, message):
+    def send_message(self, phone_number, message, thread_type: ThreadType = ThreadType.USER):
         pass
