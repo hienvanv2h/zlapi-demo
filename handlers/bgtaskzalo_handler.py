@@ -36,8 +36,8 @@ def on_notify_download_image(ch, method, properties, body, bot: IZaloBot = None,
             zip_file_url=payload_data["ZipFileUrl"],
             params=params
         )
-
-        notify_message = f"{payload.message} {get_base_url()}{payload.zip_file_url.replace('\\', '/')}"
+        zip_file_path = payload.zip_file_url.replace('\\', '/')
+        notify_message = f"{payload.message} {get_base_url()}{zip_file_path}"
 
         if bot is None:
             logger.error("ZaloBot is None. Stop processing.")
